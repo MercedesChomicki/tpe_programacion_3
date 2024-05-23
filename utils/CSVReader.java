@@ -9,13 +9,17 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+import tpe.Procesador;
 import tpe.Tarea;
 
 public class CSVReader {
-	Map<String, Tarea> tasks;
+	private Map<String, Tarea> tasks;
+	private Map<String, Procesador> processors;
 
 	public CSVReader() {
+
 		tasks = new HashMap<>();
+		processors = new HashMap<>();
 	}
 	
 	public Map<String, Tarea> readTasks(String taskPath) {
@@ -59,6 +63,8 @@ public class CSVReader {
 			Boolean refrigerado = Boolean.parseBoolean(line[2].trim());
 			Integer anio = Integer.parseInt(line[3].trim());
 			// Aca instanciar lo que necesiten en base a los datos leidos
+			Procesador processor = new Procesador(id, codigo, refrigerado, anio);
+			processors.put(id, processor);
 		}
 		
 	}
