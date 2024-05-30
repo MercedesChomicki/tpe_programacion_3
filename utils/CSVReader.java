@@ -6,7 +6,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 
 import tpe.Procesador;
@@ -17,7 +16,6 @@ public class CSVReader {
 	private Map<String, Procesador> processors;
 
 	public CSVReader() {
-
 		tasks = new HashMap<>();
 		processors = new HashMap<>();
 	}
@@ -36,8 +34,8 @@ public class CSVReader {
 			Integer tiempo = Integer.parseInt(line[2].trim());
 			Boolean critica = Boolean.parseBoolean(line[3].trim());
 			Integer prioridad = Integer.parseInt(line[4].trim());
+
 			// Aca instanciar lo que necesiten en base a los datos leidos
-			
 			Tarea task = new Tarea(id, nombre, tiempo, critica, prioridad);
 			tasks.put(id, task);
 		}
@@ -62,6 +60,7 @@ public class CSVReader {
 			String codigo = line[1].trim();
 			Boolean refrigerado = Boolean.parseBoolean(line[2].trim());
 			Integer anio = Integer.parseInt(line[3].trim());
+
 			// Aca instanciar lo que necesiten en base a los datos leidos
 			Procesador processor = new Procesador(id, codigo, refrigerado, anio);
 			processors.put(id, processor);
