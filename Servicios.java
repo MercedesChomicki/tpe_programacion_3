@@ -9,8 +9,14 @@ import java.util.*;
  * Sólo se podrá adaptar el nombre de la clase "tpe.Tarea" según sus decisiones
  * de implementación.
  */
+
 public class Servicios {
+	final static int MAXCRITICAS = 2;
 	Map<String, Tarea> tareas;
+	Map<String, Procesador> procesadores;
+	Map<Tarea, Procesador> asignadas;
+
+
 
 	/*
 	 * Expresar la complejidad temporal del constructor.
@@ -19,7 +25,7 @@ public class Servicios {
 	public Servicios(String pathProcesadores, String pathTareas)
 	{
 		CSVReader reader = new CSVReader();
-		reader.readProcessors(pathProcesadores);
+		procesadores = reader.readProcessors(pathProcesadores);
 		tareas = reader.readTasks(pathTareas);
 	}
 
@@ -66,4 +72,63 @@ public class Servicios {
 		return resultantesDelRango;
 	}
 
+
+	/*
+	BACK (estado e, solucionActual *sol)
+	\\ e: nodo del árbol de soluciones
+	\\sol: solución actúa, que se va construyendo. También puede llevarse la mejor
+	encontrada hasta el momento en otro parámetro.
+	{
+ 		if ( SOLUCION (e))
+			OperarSobreSolución (e, sol);
+		else {
+			int nrohijo = 1;
+			estado siguiente;
+			while ( HIJOS (nrohijo, e, siguiente ) )
+		 		{ if ( !PODA ( siguiente, sol) )
+ 					{ AgregarASolucionActual(siguiente, sol);
+ 						BACK ( siguiente, sol);
+ 						QuitarDeSolucionActual(siguiente, sol);
+ 					}
+				nrohijo++;
+ 		}
+	}
+}
+	 */
+	/*PREGUNTAR SOBRE LA PRIORIDAD, ES NECESARIO ORDENARLOS?
+	* ESTA BIEN APLICADO EL BACKTRACKING? creo que no :(*/
+	public void asignarTareas(int tiempoX){
+		Iterator<Tarea> itTareas = tareas.values().iterator();
+
+		while(itTareas.hasNext()){
+			Tarea t = itTareas.next();
+			asignarTarea(t, tiempoX);
+		}
+	}
+
+	private void asignarTarea(Tarea t, int tiempoX){
+		Iterator<Procesador> itProces = procesadores.values().iterator();
+
+		while(itProces.hasNext()){
+			Procesador p = itProces.next();
+			if(poda(p, t, tiempoX)){
+				p.settCriticas(p.gettCriticas()+1);
+				asignadas.put(t, p);
+
+			}
+		}
+	}
+
+
+	private boolean poda(Procesador p, Tarea t, int tiempoX) {
+		if((p.gettCriticas() == MAXCRITICAS)){
+			return false;
+		}
+		if(!p.getRefrigerado()){
+			if(t.getTiempo() > tiempoX){
+				return false;
+			}
+		}
+		return true;
+	}
 }

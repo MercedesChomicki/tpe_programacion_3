@@ -5,6 +5,7 @@ public class Procesador {
     private String codigo;
     private Boolean refrigerado;
     private int anio;
+    private int tCriticas;
 
     public Procesador(String id, String codigo, Boolean refrigerado, int anio) {
         this.id = id;
@@ -27,5 +28,13 @@ public class Procesador {
 
     public int getAnio() {
         return anio;
+    }
+
+    public int gettCriticas() {
+        return tCriticas;
+    }
+
+    public void settCriticas(int tCriticas) {
+        this.tCriticas = tCriticas;
     }
 }
