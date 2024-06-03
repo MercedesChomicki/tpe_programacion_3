@@ -27,11 +27,19 @@ public class Tarea {
         return tiempo;
     }
 
-    public Boolean getCritica() {
+    public Boolean esCritica() {
         return critica;
     }
 
     public Integer getPrioridad() {
         return prioridad;
+    }
+
+    @Override
+    public String toString() {
+        return "Tarea{" +
+                "id='" + id + '\'' +
+                ", tiempo=" + tiempo +
+                '}';
     }
 }

@@ -5,36 +5,48 @@ public class Procesador {
     private String codigo;
     private Boolean refrigerado;
     private int anio;
-    private int tCriticas;
+    private int cantTCriticas;
+    private int tiempoTotal;
 
     public Procesador(String id, String codigo, Boolean refrigerado, int anio) {
         this.id = id;
         this.codigo = codigo;
         this.refrigerado = refrigerado;
         this.anio = anio;
+        cantTCriticas = 0;
+        tiempoTotal = 0;
     }
 
-    public String getId() {
-        return id;
-    }
-
-    public String getCodigo() {
-        return codigo;
-    }
-
-    public Boolean getRefrigerado() {
+    public Boolean esRefrigerado() {
         return refrigerado;
     }
 
-    public int getAnio() {
-        return anio;
+    public int cantTCriticas() {
+        return cantTCriticas;
     }
 
-    public int gettCriticas() {
-        return tCriticas;
+    public void incrementarTCriticas(){
+        this.cantTCriticas++;
     }
 
-    public void settCriticas(int tCriticas) {
-        this.tCriticas = tCriticas;
+    public void decrementarTCriticas(){
+        this.cantTCriticas--;
+    }
+
+    public int getTiempoTotal(){
+        return tiempoTotal;
+    }
+
+    public void incrementarTiempoTotal(int tiempoTarea){
+        this.tiempoTotal += tiempoTarea;
+    }
+
+    public void decrementarTiempoTotal(int tiempoTarea){
+        this.tiempoTotal -= tiempoTarea;
+    }
+
+    @Override
+    public String toString() {
+        return this.id;
     }
 }
