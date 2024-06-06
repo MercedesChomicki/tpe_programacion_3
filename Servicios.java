@@ -19,7 +19,7 @@ public class Servicios {
 	private Map<Procesador, List<Tarea>> mejorAsignacion;
 	private int tiempoMaximoOptimo; //infinito
 	private boolean corteBusqueda;
-
+	private List<Tarea> tareasPorPrioridad;
 
 	/*
 	 * Expresar la complejidad temporal del constructor.
@@ -32,12 +32,21 @@ public class Servicios {
 		tareas = reader.readTasks(pathTareas);
 		criticas = new ArrayList<>();
 		noCriticas = new ArrayList<>();
+		tareasPorPrioridad = new ArrayList<>(tareas.values());
 		this.dividirPorCriticidad();
 		this.ordenarTareasPorPrioridad();
 		mejorAsignacion = new HashMap<>();
 		tiempoMaximoOptimo = Integer.MAX_VALUE;
 		corteBusqueda = false;
+		asignarClaves(mejorAsignacion);
     }
+
+	private void asignarClaves(Map<Procesador, List<Tarea>> mejorAsignacion){
+		//Inicializamos mejorAsignacion: asignamos como keys todos los procesadores y como values ArrayList vacios
+		for (Procesador p : procesadores.values()) {
+			mejorAsignacion.put(p, new ArrayList<>());
+		}
+	}
 
 	private void dividirPorCriticidad(){
 		for(Tarea t: tareas.values()){
@@ -50,7 +59,8 @@ public class Servicios {
 	}
 
 	private void ordenarTareasPorPrioridad(){
-		//ordenar
+		Comparator<Tarea> comparador = new ComparadorPrioridad();
+		Collections.sort(tareasPorPrioridad, comparador);
 	}
 
 	/*
@@ -78,15 +88,11 @@ public class Servicios {
 	 * O(n): recorre (en el peor de los casos) todas las tareas (si las prioridades son los extremos)
 	 */
 	public List<Tarea> servicio3(int prioridadInferior, int prioridadSuperior) {
-
-		//ordenar por prioridad -->en el constructor
-		//pivote o busco el menor dentro de las tareas con la prioridad inferior pasada por parametro y de ahi recorro hasta la superior
-
 		List<Tarea> resultantesDelRango = new LinkedList<>();
-		Iterator<Tarea> itTareas = tareas.values().iterator();
-		while(itTareas.hasNext()){
+		Iterator<Tarea> itTareas = tareasPorPrioridad.iterator();
+		while(itTareas.hasNext() && itTareas.next().getPrioridad() <= prioridadSuperior){
 			Tarea t = itTareas.next();
-			if((prioridadInferior>t.getPrioridad()) && (t.getPrioridad()<prioridadSuperior)){
+			if(t.getPrioridad() >= prioridadInferior){
 				resultantesDelRango.add(t);
 			}
 		}
@@ -94,26 +100,19 @@ public class Servicios {
 	}
 
 	public void asignarTareas(int tiempoMaxNoRefrigerado) {
-		//Pasamos todos los valores del mapa tareas al ArrayList tasks
-		ArrayList<Tarea> tasks = new ArrayList<>(tareas.values());
-
 		//Creamos un nuevos HashMap para ir guardando el estado de asignaciones
 		Map<Procesador, List<Tarea>> asignacionActual = new HashMap<>();
 
-		//Inicializamos asignacionActual: asignamos como keys todos los procesadores y como values ArrayList vacios
-		for (Procesador p : procesadores.values()) {
-			asignacionActual.put(p, new ArrayList<>());
-		}
+		//Inicializamos asignacionActual igual a mejorAsignacion que tiene asignados todos los procesadores como clave y la lista vacia
+		asignacionActual = new HashMap<>(mejorAsignacion);
 
 		// Buscamos la mejor solución (mínimo tiempo máximo de ejecución)
-		backtracking(asignacionActual, tasks, 0, tiempoMaxNoRefrigerado);
+		backtracking(asignacionActual,tareasPorPrioridad, 0, tiempoMaxNoRefrigerado);
 	}
 
 	private void backtracking(Map<Procesador, List<Tarea>> asignacionActual, List<Tarea> tasks, int indice, int tiempoMaximoNoRefrigerado) {
 
-		if(corteBusqueda){
-			return;
-		}
+		if(corteBusqueda){return;}
 
 		// Si no encuentra más tareas, se compara el tiempo maximo de la asignacion actual con el tiempo maximo previo (inicializado como "infinito")
 		if (indice == tasks.size()) {
@@ -137,17 +136,14 @@ public class Servicios {
 			if (esAsignacionValida(p, t, tiempoMaximoNoRefrigerado)) {
 
 				// PODA1: Si el tiempo que se obtendría ya es mayor al tiempo minimo obtenido, no tiene sentido asignarlo. Cortamos ejecucion de esa rama
-				if(!poda1(p, t)){
+				// PODA2: Si el tiempo obtenido es el menor tiempo posible (porque por ejemplo la tarea más lenta es 100 y tiempo no puede ser menor a eso), corto la ejecucion
+				if(!poda1(p, t) && corteBusqueda){
 					asignacionActual.get(p).add(t);
 					p.incrementarTiempoTotal(t.getTiempo());
 					if(t.esCritica()){
 						p.incrementarTCriticas();
 					}
 					backtracking(asignacionActual, tasks, indice + 1, tiempoMaximoNoRefrigerado);
-
-					// PODA2: Si el tiempo obtenido es el menor tiempo posible (porque por ejemplo la tarea más lenta es 100 y tiempo no puede ser menor a eso), corto la ejecucion
-					if(corteBusqueda) return;
-
 					asignacionActual.get(p).remove(t);
 					p.decrementarTiempoTotal(t.getTiempo());
 					if(t.esCritica()){
@@ -190,6 +186,7 @@ public class Servicios {
 		return tiempoMaximo;
 	}
 
+	// Devuelve la tarea que lleva mayor tiempo de procesamiento
 	public int tiempoMaximoTareas(){
 		int tiempoMax = 0;
 		for(Tarea t: tareas.values()){
@@ -201,85 +198,50 @@ public class Servicios {
 	}
 
 	public void getMejorAsignacion(){
+		// Imprimir la asignación resultante
 		for (Map.Entry<Procesador, List<Tarea>> entry : mejorAsignacion.entrySet()) {
-			Procesador procesador = entry.getKey();
-			List<Tarea> tareas = entry.getValue();
-
-			System.out.println("Procesador: "+procesador);
-			for(Tarea tarea: tareas){
-
-				System.out.println("hola");
+			System.out.println("Procesador: " + entry.getKey().getId());
+			for (Tarea tarea : entry.getValue()) {
+				System.out.println("  - " + tarea.getNombre());
 			}
 		}
 	}
 
-//	public void asignarTareas(int tiempoX){
-//		ArrayList<Tarea> tasks = new ArrayList<>(tareas.values());
-//		ArrayList<Procesador> processors = new ArrayList<>(procesadores.values());
-//		Asignacion solucionActual = new Asignacion();
-//
-//		back(solucionActual, tasks, processors, tiempoX);
-//		//back(solucionActual, tasks, tiempoX);
-//	}
-//
-//	private void back(Asignacion solucionActual, ArrayList<Tarea> tasks, ArrayList<Procesador> processors, int tiempoX){
-//	//private void back(Asignacion solucionActual, ArrayList<Tarea> tasks, int tiempoX){
-//
-//		//SOLUCION 1:
-//		//[(T1, P1)]
-//		//[(T1, P1), (T2, P1)]
-//		//[(T1, P1), (T2, P1), (T3, P1)]
-//		//[(T1, P1), (T2, P1), (T3, P1), (T4, P1)]
-//
-//		if(tasks.isEmpty()){
-//			if(mejorSolucion == null || solucionActual.tiempoTotal() < mejorSolucion.tiempoTotal()){
-//				mejorSolucion = solucionActual;
-//			}
-//		} else {
-////			Iterator<Procesador> itProces = procesadores.values().iterator();
-////			while(itProces.hasNext()){
-////				Procesador p = itProces.next();
-//				Procesador p = processors.getFirst();
-//				Tarea t = tasks.getFirst();
-//				if(cumpleRestricciones(p,t,tiempoX)){
-//					solucionActual.asignarTarea(t,p);
-//					solucionActual.incrementarTiempo(t.getTiempo());
-//					tasks.removeFirst();
-//					processors.removeFirst();
-//					back(solucionActual, tasks, processors, tiempoX);
-//					poda(processors);
-//				}
-//
-//
-//					//tasks.agregarAlComienzo(); //?
-//
-////				if(poda(p, t, tiempoX)){
-////					if(t.esCritica()){
-////						p.incrementarTCriticas();
-////					}
-////					//p.incrementarTiempo(t.getTiempo())
-////					//asignaciones.put(t, p);
-////
-////				}
-//			//}
-//		}
-//	}
+	/* Teniendo en cuenta el tiempo de la tarea de tiempo maximo, ir agregando a los procesadores (por prioridad)
+	* las tareas y cuando llegue a ese tiempo maximo, cambiar de procesador. Si el recorrido de los procesadores termina
+	* (no tenemos mas procesadores), tendria que volver a empezar para seguir asignando desde el primer procesador */
 
-	private void poda(ArrayList<Procesador> processors) {
-		if(processors != null){
-			processors.clear();
+	public void greedy(int tiempoMaxNoRefrigerado){
+
+		ArrayList<Procesador> processors = new ArrayList<>(procesadores.values());
+
+		int posP=0;
+		for(int posT = tareasPorPrioridad.size()-1; posT >= 0; posT--){
+			Tarea t = tareasPorPrioridad.get(posT);
+			Procesador p = processors.get(posP);
+
+			if(p.getTiempoTotal() + t.getTiempo() <= tiempoMaximoTareas()
+					&& esAsignacionValida(p, t, tiempoMaxNoRefrigerado))
+			{
+				mejorAsignacion.get(p).add(t);
+				p.incrementarTiempoTotal(t.getTiempo());
+			}
+
+			//Si recorrimos todos los procesadores y aún quedan tareas por asignar, volvemos a recorrer desde el primer procesador
+			if(posP == processors.size()) posP=0;
+
+			posP++;
 		}
+
+		/* Ejemplo: Tmax=100, Tareas = [t1=20, t2,=30, t3=40, t4=50, t5=100, t6=60, t7=10, T=50]
+		p1= |20|30|40| -->90+50<=100 NO --->
+		p2= |50| --> 50+100<=100 NO --->
+		P3= |100| --> 100+60 <=100 NO --->
+		P4= |60|10| --> 70+50<=100 NO -->
+		P1= |20|30|40|50|
+		*/
 	}
 
-//	private boolean cumpleRestricciones(Procesador p, Tarea t, int tiempoX) {
-//		if((p.gettCriticas() == MAXCRITICAS)){
-//			return false;
-//		}
-//		if(!p.getRefrigerado()){
-//			if(t.getTiempo() > tiempoX){ //p.tiempoTotalEjecucion + t.tiempoEjecucion
-//				return false;
-//			}
-//		}
-//		return true;
-//	}
+
+
 }

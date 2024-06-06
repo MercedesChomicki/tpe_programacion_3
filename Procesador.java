@@ -17,6 +17,10 @@ public class Procesador {
         tiempoTotal = 0;
     }
 
+    public String getId(){
+        return id;
+    }
+
     public Boolean esRefrigerado() {
         return refrigerado;
     }
