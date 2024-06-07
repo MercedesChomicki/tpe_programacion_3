@@ -23,8 +23,15 @@ public class Servicios {
 
 	/*
 	 * Expresar la complejidad temporal del constructor.
-	 * O(n): recorre todos los procesadores O(n) y todas las tareas O(n).
+	 * O(n log n):
+		* Lectura de procesadores y tareas: O(n)
+		* Inicialización de listas criticas, noCriticas: O(1)
+		* Inicialización de lista tareasPorPrioridad: O(n)
+		* División por criticidad: O(n) --> itera todas las tareas
+		* Ordenar tareas por prioridad: O(n log n)
+		* Inicialización de mejorAsignacion: O(n)
 	 */
+
 	public Servicios(String pathProcesadores, String pathTareas)
 	{
 		CSVReader reader = new CSVReader();
@@ -99,7 +106,7 @@ public class Servicios {
 		return resultantesDelRango;
 	}
 
-	public void asignarTareas(int tiempoMaxNoRefrigerado) {
+	public void backtracking(int tiempoMaxNoRefrigerado) {
 		//Creamos un nuevos HashMap para ir guardando el estado de asignaciones
 		Map<Procesador, List<Tarea>> asignacionActual = new HashMap<>();
 
@@ -107,10 +114,10 @@ public class Servicios {
 		asignacionActual = new HashMap<>(mejorAsignacion);
 
 		// Buscamos la mejor solución (mínimo tiempo máximo de ejecución)
-		backtracking(asignacionActual,tareasPorPrioridad, 0, tiempoMaxNoRefrigerado);
+		back(asignacionActual,tareasPorPrioridad, 0, tiempoMaxNoRefrigerado);
 	}
 
-	private void backtracking(Map<Procesador, List<Tarea>> asignacionActual, List<Tarea> tasks, int indice, int tiempoMaximoNoRefrigerado) {
+	private void back(Map<Procesador, List<Tarea>> asignacionActual, List<Tarea> tasks, int indice, int tiempoMaximoNoRefrigerado) {
 
 		if(corteBusqueda){return;}
 
@@ -125,7 +132,6 @@ public class Servicios {
 
 				if(poda2()){
 					corteBusqueda = true;
-					return;
 				}
 			}
 			return;
@@ -135,15 +141,16 @@ public class Servicios {
 		for (Procesador p : asignacionActual.keySet()) {
 			if (esAsignacionValida(p, t, tiempoMaximoNoRefrigerado)) {
 
-				// PODA1: Si el tiempo que se obtendría ya es mayor al tiempo minimo obtenido, no tiene sentido asignarlo. Cortamos ejecucion de esa rama
-				// PODA2: Si el tiempo obtenido es el menor tiempo posible (porque por ejemplo la tarea más lenta es 100 y tiempo no puede ser menor a eso), corto la ejecucion
-				if(!poda1(p, t) && corteBusqueda){
+				if(!poda1(p, t)){
 					asignacionActual.get(p).add(t);
 					p.incrementarTiempoTotal(t.getTiempo());
 					if(t.esCritica()){
 						p.incrementarTCriticas();
 					}
-					backtracking(asignacionActual, tasks, indice + 1, tiempoMaximoNoRefrigerado);
+					back(asignacionActual, tasks, indice + 1, tiempoMaximoNoRefrigerado);
+
+					if(corteBusqueda) return;
+
 					asignacionActual.get(p).remove(t);
 					p.decrementarTiempoTotal(t.getTiempo());
 					if(t.esCritica()){
@@ -164,10 +171,16 @@ public class Servicios {
 		return true;
 	}
 
+	/* PODA1: Si el tiempo que se obtendría ya es mayor al tiempo minimo obtenido, no tiene sentido asignarlo.
+	 * Cortamos ejecucion de esa rama
+	 * */
 	private boolean poda1(Procesador p, Tarea t){
 		return (p.getTiempoTotal() + t.getTiempo()) > tiempoMaximoOptimo;
 	}
 
+	/* PODA2: Si el tiempo obtenido es el menor tiempo posible (porque por ejemplo la tarea más lenta es 100
+	 * y tiempo no puede ser menor a eso), corto la ejecucion
+	 */
 	private boolean poda2(){
 		return tiempoMaximoOptimo == tiempoMaximoTareas();
 	}
@@ -199,10 +212,18 @@ public class Servicios {
 
 	public void getMejorAsignacion(){
 		// Imprimir la asignación resultante
-		for (Map.Entry<Procesador, List<Tarea>> entry : mejorAsignacion.entrySet()) {
-			System.out.println("Procesador: " + entry.getKey().getId());
-			for (Tarea tarea : entry.getValue()) {
-				System.out.println("  - " + tarea.getNombre());
+		for(Map.Entry<Procesador, List<Tarea>> entry : mejorAsignacion.entrySet()) {
+			Procesador procesador = entry.getKey();
+			List<Tarea> tareasAsignadas = entry.getValue();
+
+			System.out.println("Procesador: " + procesador.getId());
+
+			if (tareasAsignadas.isEmpty()) {
+				System.out.println("  Sin tareas asignadas.");
+			} else {
+				for (Tarea tarea : tareasAsignadas) {
+					System.out.println("  Tarea: " + tarea.getNombre());
+				}
 			}
 		}
 	}
@@ -225,12 +246,14 @@ public class Servicios {
 			{
 				mejorAsignacion.get(p).add(t);
 				p.incrementarTiempoTotal(t.getTiempo());
+
+			} else {
+				posT++;
+				posP++;
 			}
 
 			//Si recorrimos todos los procesadores y aún quedan tareas por asignar, volvemos a recorrer desde el primer procesador
 			if(posP == processors.size()) posP=0;
-
-			posP++;
 		}
 
 		/* Ejemplo: Tmax=100, Tareas = [t1=20, t2,=30, t3=40, t4=50, t5=100, t6=60, t7=10, T=50]
