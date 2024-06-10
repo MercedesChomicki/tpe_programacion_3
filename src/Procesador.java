@@ -49,6 +49,46 @@ public class Procesador {
         this.tiempoTotal -= tiempoTarea;
     }
 
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getCodigo() {
+        return codigo;
+    }
+
+    public void setCodigo(String codigo) {
+        this.codigo = codigo;
+    }
+
+    public Boolean getRefrigerado() {
+        return refrigerado;
+    }
+
+    public void setRefrigerado(Boolean refrigerado) {
+        this.refrigerado = refrigerado;
+    }
+
+    public int getAnio() {
+        return anio;
+    }
+
+    public void setAnio(int anio) {
+        this.anio = anio;
+    }
+
+    public int getCantTCriticas() {
+        return cantTCriticas;
+    }
+
+    public void setCantTCriticas(int cantTCriticas) {
+        this.cantTCriticas = cantTCriticas;
+    }
+
+    public void setTiempoTotal(int tiempoTotal) {
+        this.tiempoTotal = tiempoTotal;
+    }
+
     @Override
     public String toString() {
         return this.id;
