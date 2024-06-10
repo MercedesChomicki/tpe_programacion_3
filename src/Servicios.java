@@ -22,6 +22,7 @@ public class Servicios {
 	private List<Tarea> tareasPorPrioridad;
 	private List<Tarea> tareasPorTiempo;
 	private int cantidadEstados;
+	private List<Tarea> tareasN;
 
 
 	/*
@@ -50,7 +51,6 @@ public class Servicios {
 		mejorAsignacion = new HashMap<>();
 		tiempoMaximoOptimo = Integer.MAX_VALUE;
 		corteBusqueda = false;
-		asignarClaves(mejorAsignacion);
 		cantidadEstados = 0;
     }
 
@@ -139,7 +139,7 @@ public class Servicios {
 			// Si el tiempo obtenido es menor al previo lo reemplazamos para obtener el minimo posible
 			if (tiempoMaximo < tiempoMaximoOptimo) {
 				tiempoMaximoOptimo = tiempoMaximo;
-				mejorAsignacion = new HashMap<>(asignacionActual);
+				clonarHashMap(asignacionActual);
 
 				if(poda2()){
 					corteBusqueda = true;
@@ -171,6 +171,17 @@ public class Servicios {
 				}
 			}
 		}
+	}
+
+	private void clonarHashMap(Map<Procesador, List<Tarea>> asignacionActual) {
+		for(Map.Entry<Procesador, List<Tarea>> entry : asignacionActual.entrySet()) {
+			Procesador procesador = entry.getKey();
+			List<Tarea> tareasAsignadas = entry.getValue();
+			tareasN = new ArrayList<>(tareasAsignadas);
+			mejorAsignacion.put(procesador, tareasN);
+		}
+
+
 	}
 
 	private boolean esAsignacionValida(Procesador p, Tarea t, int tiempoMaximoNoRefrigerado) {
