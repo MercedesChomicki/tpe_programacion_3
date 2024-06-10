@@ -2,6 +2,7 @@ package tpe;
 
 import tpe.utils.CSVReader;
 
+import java.sql.SQLOutput;
 import java.util.*;
 
 /**
@@ -83,7 +84,8 @@ public class Servicios {
 		Collections.sort(tareasPorTiempo, comparador);
 	}
 
-	/*
+	/* Servicio 1: Dado un identificador de tarea obtener toda la información de la tarea asociada.
+	 *
 	 * Expresar la complejidad temporal del servicio 1.
 	 * O(1): al ser HashMap accede directamente a la Tarea a partir del ID.
 	 */
@@ -91,7 +93,9 @@ public class Servicios {
 		return tareas.get(ID);
 	}
 
-	/*
+	/* Servicio 2: Permitir que el usuario decida si quiere ver todas las tareas críticas o no críticas y generar
+	 * el listado apropiado resultante.
+	 *
 	 * Expresar la complejidad temporal del servicio 2.
 	 * O(1): devuelve el ArrayList de tareas criticas o no criticas segun se pase por parametro
 	 */
@@ -103,17 +107,20 @@ public class Servicios {
 		}
 	}
 
-	/*
+	/* Servicio 3: Obtener todas las tareas entre 2 niveles de prioridad indicados.
+	 *
 	 * Expresar la complejidad temporal del servicio 3.
 	 * O(n): recorre (en el peor de los casos) todas las tareas (si las prioridades son los extremos)
 	 */
 	public List<Tarea> servicio3(int prioridadInferior, int prioridadSuperior) {
-		List<Tarea> resultantesDelRango = new LinkedList<>();
-		Iterator<Tarea> itTareas = tareasPorPrioridad.iterator();
-		while(itTareas.hasNext() && itTareas.next().getPrioridad() <= prioridadSuperior){
-			Tarea t = itTareas.next();
-			if(t.getPrioridad() >= prioridadInferior){
+		List<Tarea> resultantesDelRango = new ArrayList<>();
+		for (int pos=0; pos < tareasPorPrioridad.size(); pos++){
+			Tarea t = tareasPorPrioridad.get(pos);
+			if(t.getPrioridad() >= prioridadInferior && t.getPrioridad() <= prioridadSuperior){
 				resultantesDelRango.add(t);
+			}
+			if(t.getPrioridad() >= prioridadSuperior){
+				return resultantesDelRango;
 			}
 		}
 		return resultantesDelRango;
@@ -310,7 +317,7 @@ public class Servicios {
 		System.out.println( "Greedy\n" +
 				"Solución obtenida: " + getMejorAsignacion() +
 				"\nSolución obtenida (tiempo máximo de ejecución): " + calcularTiempoMaximoAsignacion(mejorAsignacion)+
-				"\nMétrica para analizar el costo de la solución (cantidad de estados generados): "+ getCantidadEstados());
+				"\nMétrica para analizar el costo de la solución (cantidad de candidatos considerados): "+ getCantidadEstados());
 	}
 
 }

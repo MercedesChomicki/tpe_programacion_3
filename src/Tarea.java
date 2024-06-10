@@ -37,9 +37,12 @@ public class Tarea {
 
     @Override
     public String toString() {
-        return "Tarea{" +
-                "id='" + id + '\'' +
-                ", tiempo=" + tiempo +
+        return "Tarea {" +
+                "id='" + getId() + '\'' +
+                ", nombre=" + getNombre() +
+                ", tiempo=" + getTiempo() +
+                ", critica=" + esCritica() +
+                ", prioridad=" + getPrioridad() +
                 '}';
     }
 }
