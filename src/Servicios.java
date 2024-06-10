@@ -48,7 +48,9 @@ public class Servicios {
 		tareasPorTiempo = new ArrayList<>(tareas.values());
 		this.dividirPorCriticidad();
 		this.ordenarTareasPorPrioridad();
+		this.ordenarTareasPorTiempo();
 		mejorAsignacion = new HashMap<>();
+		this.asignarClaves(mejorAsignacion);
 		tiempoMaximoOptimo = Integer.MAX_VALUE;
 		corteBusqueda = false;
 		cantidadEstados = 0;
@@ -180,8 +182,6 @@ public class Servicios {
 			tareasN = new ArrayList<>(tareasAsignadas);
 			mejorAsignacion.put(procesador, tareasN);
 		}
-
-
 	}
 
 	private boolean esAsignacionValida(Procesador p, Tarea t, int tiempoMaximoNoRefrigerado) {
@@ -240,25 +240,28 @@ public class Servicios {
 
 		ArrayList<Procesador> processors = new ArrayList<>(procesadores.values());
 
-		int posP=0;
 		for(int posT = tareasPorTiempo.size()-1; posT >= 0; posT--){
 			Tarea t = tareasPorTiempo.get(posT);
-			Procesador p = processors.get(posP);
+			int posP=0, tiempoOptimo = Integer.MAX_VALUE;
+			Procesador mejorProcesador = null;
 
-			if(p.getTiempoTotal() + t.getTiempo() <= tiempoMaximoTareas()
-					&& esAsignacionValida(p, t, tiempoMaxNoRefrigerado))
-			{
-				mejorAsignacion.get(p).add(t);
-				cantidadEstados++;
-				p.incrementarTiempoTotal(t.getTiempo());
-
-			} else {
-				posT++;
+			while(posP < processors.size()){
+				Procesador p = processors.get(posP);
+				if(esAsignacionValida(p, t, tiempoMaxNoRefrigerado)){
+					if(p.getTiempoTotal() < tiempoOptimo){
+						tiempoOptimo = p.getTiempoTotal();
+						mejorProcesador = p;
+					}
+				}
 				posP++;
 			}
 
-			//Si recorrimos todos los procesadores y aún quedan tareas por asignar, volvemos a recorrer desde el primer procesador
-			if(posP == processors.size()) posP=0;
+			mejorAsignacion.get(mejorProcesador).add(t);
+			cantidadEstados++;
+			mejorProcesador.incrementarTiempoTotal(t.getTiempo());
+			if(t.esCritica()){
+				mejorProcesador.incrementarTCriticas();
+			}
 		}
 	}
 
@@ -270,19 +273,20 @@ public class Servicios {
 			List<Tarea> tareasAsignadas = entry.getValue();
 
 			mejorAsig += "\n Procesador: " + procesador.getId();
-			//System.out.println("Procesador: " + procesador.getId());
 
 			if (tareasAsignadas.isEmpty()) {
 				mejorAsig += "\n  Sin tareas asignadas.";
-				//System.out.println("  Sin tareas asignadas.");
 			} else {
 				for (Tarea tarea : tareasAsignadas) {
 					mejorAsig += "\n  Tarea: " + tarea.getNombre();
-					//System.out.println("  Tarea: " + tarea.getNombre());
 				}
 			}
 		}
 		return mejorAsig;
+	}
+
+	public int getTiempoMaximoOptimo(){
+		return tiempoMaximoOptimo;
 	}
 
 	/* Para encontrar la solucion con el mejor tiempo posible y la menor cantidad de recorridos, utilizamos
@@ -295,13 +299,13 @@ public class Servicios {
 	public void solucionBacktracking() {
 		System.out.println( "Backtracking\n" +
 				"Solución obtenida: " + getMejorAsignacion() +
-				"\nSolución obtenida (tiempo máximo de ejecución): " + calcularTiempoMaximoAsignacion(mejorAsignacion)+
+				"\nSolución obtenida (tiempo máximo de ejecución): " + getTiempoMaximoOptimo()+
 				"\nMétrica para analizar el costo de la solución (cantidad de estados generados): "+ getCantidadEstados());
 	}
 
-	/* Teniendo en cuenta el tiempo de la tarea de tiempo maximo, ir agregando a los procesadores (por tiempo)
-	 * las tareas y cuando llegue a ese tiempo maximo, cambiar de procesador. Si el recorrido de los procesadores termina
-	 * (no tenemos mas procesadores), tendria que volver a empezar para seguir asignando desde el primer procesador */
+	/* Recorriendo las tareas ordenadas por tiempo, de mayor a menor, por cada una se recorren todos los procesadores
+	* y, si es una asignacion valida, guarda el mejor tiempo entre los procesadores disponibles y, una vez recorridos,
+	* se le asigna la tarea al mejor */
 	public void solucionGreedy() {
 		System.out.println( "Greedy\n" +
 				"Solución obtenida: " + getMejorAsignacion() +

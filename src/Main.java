@@ -6,11 +6,11 @@ public class Main {
 		Servicios servicios = new Servicios("src/datasets/Procesadores.csv", "src/datasets/Tareas.csv");
 		int tiempoMaxNoRefrigerado = 60;
 
-		servicios.backtracking(tiempoMaxNoRefrigerado);
-		servicios.solucionBacktracking();
+		//servicios.backtracking(tiempoMaxNoRefrigerado);
+		//servicios.solucionBacktracking();
 
-		//servicios.greedy(tiempoMaxNoRefrigerado);
-		//servicios.solucionGreedy();
+		servicios.greedy(tiempoMaxNoRefrigerado);
+		servicios.solucionGreedy();
 
 	}
 }
