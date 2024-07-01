@@ -6,7 +6,7 @@ public class Main {
 
 	public static void main(String args[]) {
 		Servicios servicios = new Servicios("src/datasets/Procesadores.csv", "src/datasets/Tareas.csv");
-		int tiempoMaxNoRefrigerado = 60;
+		int tiempoMaxNoRefrigerado = 100;
 
 		/* SERVICIO 1 */
 		//Tarea t = servicios.servicio1("T2");
@@ -27,6 +27,9 @@ public class Main {
 		/* GREEDY */
 		//servicios.greedy(tiempoMaxNoRefrigerado);
 		//servicios.solucionGreedy();
+
+		servicios.servicio3(30, 50);
+		// T5(1), T6(31), T2(31), T4(58), T3(70), T1(92) --> priorInf=29, priorSup=70
 
 	}
 }

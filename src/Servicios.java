@@ -15,15 +15,15 @@ public class Servicios {
 	private static final int MAXCRITICAS = 2;
 	private Map<String, Tarea> tareas;
 	private Map<String, Procesador> procesadores;
-	private List<Tarea> criticas;
-	private List<Tarea> noCriticas;
+	private ArrayList<Tarea> criticas;
+	private ArrayList<Tarea> noCriticas;
 	private Map<Procesador, List<Tarea>> mejorAsignacion;
 	private int tiempoMaximoOptimo; //infinito
 	private boolean corteBusqueda;
-	private List<Tarea> tareasPorPrioridad;
-	private List<Tarea> tareasPorTiempo;
+	private ArrayList<Tarea> tareasPorPrioridad;
+	private ArrayList<Tarea> tareasPorTiempo;
 	private int cantidadEstados;
-	private List<Tarea> tareasN;
+	private ArrayList<Tarea> tareasN;
 
 
 	/*
@@ -110,25 +110,71 @@ public class Servicios {
 	/* Servicio 3: Obtener todas las tareas entre 2 niveles de prioridad indicados.
 	 *
 	 * Expresar la complejidad temporal del servicio 3.
-	 * O(n): recorre (en el peor de los casos) todas las tareas (si las prioridades son los extremos)
+	 * O(n): visita (en el peor de los casos) todas las tareas (si las prioridades son los extremos)
 	 */
 	public List<Tarea> servicio3(int prioridadInferior, int prioridadSuperior) {
-		List<Tarea> resultantesDelRango = new ArrayList<>();
-		for (int pos=0; pos < tareasPorPrioridad.size(); pos++){
-			Tarea t = tareasPorPrioridad.get(pos);
-			if(t.getPrioridad() >= prioridadInferior && t.getPrioridad() <= prioridadSuperior){
-				resultantesDelRango.add(t);
-			}
-			if(t.getPrioridad() >= prioridadSuperior){
-				return resultantesDelRango;
+
+		ArrayList<Tarea> resultantesDelRango = new ArrayList<>();
+		ArrayList<Tarea> visitados = new ArrayList<>();
+		buscarEnRango(tareasPorPrioridad, 0, tareasPorPrioridad.size() -1,
+				prioridadInferior, prioridadSuperior, resultantesDelRango, visitados);
+
+		if(resultantesDelRango.isEmpty()){
+			System.err.println("No hay tareas en en ese rango de prioridad");
+		}
+
+		//Mostramos las tareas resultantes del rango
+		for(int i=0; i< resultantesDelRango.size();i++){
+			System.out.println(resultantesDelRango.get(i));
+		}
+
+		return resultantesDelRango;
+	}
+
+	public void buscarEnRango(ArrayList<Tarea> tasks, int left, int right, int priorInf, int priorSup,
+						  ArrayList<Tarea> resultantes, ArrayList<Tarea> visitados) {
+
+		if (left <= right) {
+			int pivotIndex = (left+right) / 2;
+			Tarea pivot = tasks.get(pivotIndex);
+
+			if(!visitados.contains(pivot)){
+				visitados.add(pivot);
+
+				if (pivot.getPrioridad() >= priorInf && pivot.getPrioridad() <= priorSup) {
+					resultantes.add(pivot);
+					buscarEnRango(tasks, left, pivotIndex - 1, priorInf, priorSup, resultantes, visitados);
+					buscarEnRango(tasks, pivotIndex + 1, right, priorInf, priorSup, resultantes, visitados);
+				}
+				if(pivot.getPrioridad() < priorInf){
+					buscarEnRango(tasks, pivotIndex + 1, right, priorInf, priorSup, resultantes, visitados);
+				}
+				else if(pivot.getPrioridad() > priorSup){
+					buscarEnRango(tasks, left, pivotIndex - 1, priorInf, priorSup, resultantes, visitados);
+				}
 			}
 		}
-		return resultantesDelRango;
+	}
+
+
+	/* Para encontrar la solucion con el mejor tiempo posible y la menor cantidad de recorridos, utilizamos
+	 * las siguientes 2 podas:
+	 * PODA1: Si el tiempo que se obtendría al agregar la nueva tarea al procesador ya es mayor al
+	 * tiempo minimo obtenido entre las soluciones anteriores, cortamos ejecucion de esa rama
+	 * PODA2: Si el tiempo obtenido es el menor tiempo posible (porque por ejemplo la tarea más lenta es 100
+	 * y tiempo no puede ser menor a eso), se corta la ejecucion
+	 * */
+	public void solucionBacktracking() {
+		System.out.println( "Backtracking\n" +
+				"Solución obtenida: " + getMejorAsignacion() +
+				"\nSolución obtenida (tiempo máximo de ejecución): " + getTiempoMaximoOptimo() +
+				"\nMétrica para analizar el costo de la solución (cantidad de estados generados): "+ getCantidadEstados());
 	}
 
 	public void backtracking(int tiempoMaxNoRefrigerado) {
 		//Creamos un nuevos HashMap para ir guardando el estado de asignaciones
 		Map<Procesador, List<Tarea>> asignacionActual = new HashMap<>();
+		//Solucion sol = new Solucion();
 
 		//Asignamos todos los procesadores como clave y la lista vacia
 		asignarClaves(asignacionActual);
@@ -138,6 +184,8 @@ public class Servicios {
 	}
 
 	private void back(Map<Procesador, List<Tarea>> asignacionActual, List<Tarea> tasks, int indice, int tiempoMaximoNoRefrigerado) {
+
+		cantidadEstados++; //cantidad de estados por los que va pasando el backtracking
 
 		if(corteBusqueda){return;}
 
@@ -163,7 +211,7 @@ public class Servicios {
 
 				if(!poda1(p, t)){
 					asignacionActual.get(p).add(t);
-					cantidadEstados++; //cantidad de estados por los que va pasando el backtracking
+					//cantidadEstados++; //cantidad de estados por los que va pasando el backtracking
 					p.incrementarTiempoTotal(t.getTiempo());
 					if(t.esCritica()){
 						p.incrementarTCriticas();
@@ -296,19 +344,7 @@ public class Servicios {
 		return tiempoMaximoOptimo;
 	}
 
-	/* Para encontrar la solucion con el mejor tiempo posible y la menor cantidad de recorridos, utilizamos
-	* las siguientes 2 podas:
-	* PODA1: Si el tiempo que se obtendría al agregar la nueva tarea al procesador ya es mayor al
-	* tiempo minimo obtenido entre las soluciones anteriores, cortamos ejecucion de esa rama
-	* PODA2: Si el tiempo obtenido es el menor tiempo posible (porque por ejemplo la tarea más lenta es 100
-	* y tiempo no puede ser menor a eso), se corta la ejecucion
-	* */
-	public void solucionBacktracking() {
-		System.out.println( "Backtracking\n" +
-				"Solución obtenida: " + getMejorAsignacion() +
-				"\nSolución obtenida (tiempo máximo de ejecución): " + getTiempoMaximoOptimo()+
-				"\nMétrica para analizar el costo de la solución (cantidad de estados generados): "+ getCantidadEstados());
-	}
+
 
 	/* Recorriendo las tareas ordenadas por tiempo, de mayor a menor, por cada una se recorren todos los procesadores
 	* y, si es una asignacion valida, guarda el mejor tiempo entre los procesadores disponibles y, una vez recorridos,
