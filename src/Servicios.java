@@ -13,6 +13,7 @@ import java.util.*;
 
 public class Servicios {
 	private static final int MAXCRITICAS = 2;
+	private static final int INFINITO = Integer.MAX_VALUE;
 	private Map<String, Tarea> tareas;
 	private Map<String, Procesador> procesadores;
 	private ArrayList<Tarea> criticas;
@@ -22,7 +23,7 @@ public class Servicios {
 	private boolean corteBusqueda;
 	private ArrayList<Tarea> tareasPorPrioridad;
 	private ArrayList<Tarea> tareasPorTiempo;
-	private int cantidadEstados;
+	private int contador;
 	private ArrayList<Tarea> tareasN;
 
 
@@ -52,9 +53,9 @@ public class Servicios {
 		this.ordenarTareasPorTiempo();
 		mejorAsignacion = new HashMap<>();
 		this.asignarClaves(mejorAsignacion);
-		tiempoMaximoOptimo = Integer.MAX_VALUE;
+		tiempoMaximoOptimo = INFINITO;
 		corteBusqueda = false;
-		cantidadEstados = 0;
+		contador = 0;
     }
 
 	private void asignarClaves(Map<Procesador, List<Tarea>> asignacion){
@@ -123,11 +124,6 @@ public class Servicios {
 			System.err.println("No hay tareas en en ese rango de prioridad");
 		}
 
-		//Mostramos las tareas resultantes del rango
-		for(int i=0; i< resultantesDelRango.size();i++){
-			System.out.println(resultantesDelRango.get(i));
-		}
-
 		return resultantesDelRango;
 	}
 
@@ -146,6 +142,7 @@ public class Servicios {
 					buscarEnRango(tasks, left, pivotIndex - 1, priorInf, priorSup, resultantes, visitados);
 					buscarEnRango(tasks, pivotIndex + 1, right, priorInf, priorSup, resultantes, visitados);
 				}
+
 				if(pivot.getPrioridad() < priorInf){
 					buscarEnRango(tasks, pivotIndex + 1, right, priorInf, priorSup, resultantes, visitados);
 				}
@@ -164,28 +161,32 @@ public class Servicios {
 	 * PODA2: Si el tiempo obtenido es el menor tiempo posible (porque por ejemplo la tarea más lenta es 100
 	 * y tiempo no puede ser menor a eso), se corta la ejecucion
 	 * */
-	public void solucionBacktracking() {
-		System.out.println( "Backtracking\n" +
-				"Solución obtenida: " + getMejorAsignacion() +
-				"\nSolución obtenida (tiempo máximo de ejecución): " + getTiempoMaximoOptimo() +
-				"\nMétrica para analizar el costo de la solución (cantidad de estados generados): "+ getCantidadEstados());
-	}
 
-	public void backtracking(int tiempoMaxNoRefrigerado) {
+	public Solucion backtracking(int tiempoMaxNoRefrigerado) {
 		//Creamos un nuevos HashMap para ir guardando el estado de asignaciones
 		Map<Procesador, List<Tarea>> asignacionActual = new HashMap<>();
-		//Solucion sol = new Solucion();
 
 		//Asignamos todos los procesadores como clave y la lista vacia
 		asignarClaves(asignacionActual);
 
 		// Buscamos la mejor solución (mínimo tiempo máximo de ejecución)
 		back(asignacionActual,tareasPorPrioridad, 0, tiempoMaxNoRefrigerado);
+
+		if(tiempoMaximoOptimo != INFINITO){
+			return new Solucion("Backtracking",mejorAsignacion, tiempoMaximoOptimo, contador);
+		}
+		/* Si el tiempoMaximoOptimo es igual a INFINITO, quiere decir que el método back no encontró ninguna solución.
+		Esto se debe a que (indice == tasks.size()) siempre da falso ya que hay alguna/s tarea/s que se pueden
+		asignar a ningun procesador y por ende no puede terminar el recorrido.
+		En este caso enviamos a Solucion un HashMap vacío.
+		*/
+		return new Solucion("Backtracking",new HashMap<>());
 	}
 
 	private void back(Map<Procesador, List<Tarea>> asignacionActual, List<Tarea> tasks, int indice, int tiempoMaximoNoRefrigerado) {
 
-		cantidadEstados++; //cantidad de estados por los que va pasando el backtracking
+		//cantidad de estados por los que va pasando el backtracking
+		contador++;
 
 		if(corteBusqueda){return;}
 
@@ -208,10 +209,8 @@ public class Servicios {
 		Tarea t = tasks.get(indice);
 		for (Procesador p : asignacionActual.keySet()) {
 			if (esAsignacionValida(p, t, tiempoMaximoNoRefrigerado)) {
-
 				if(!poda1(p, t)){
 					asignacionActual.get(p).add(t);
-					//cantidadEstados++; //cantidad de estados por los que va pasando el backtracking
 					p.incrementarTiempoTotal(t.getTiempo());
 					if(t.esCritica()){
 						p.incrementarTCriticas();
@@ -243,7 +242,7 @@ public class Servicios {
 		int tiempoTotal = p.getTiempoTotal();
 		int tareasCriticas = p.cantTCriticas();
 
-		if (t.esCritica() && tareasCriticas >= 2) return false;
+		if (t.esCritica() && tareasCriticas >= MAXCRITICAS) return false;
 		if (!p.esRefrigerado() && (tiempoTotal + t.getTiempo()) > tiempoMaximoNoRefrigerado) return false;
 
 		return true;
@@ -287,22 +286,28 @@ public class Servicios {
 		return tiempoMax;
 	}
 
-	public int getCantidadEstados(){
-		return cantidadEstados;
-	}
 
-	public void greedy(int tiempoMaxNoRefrigerado){
+	/* Recorriendo las tareas ordenadas por tiempo, de mayor a menor, por cada una se recorren todos los procesadores
+	 * y, si es una asignacion valida, guarda el mejor tiempo entre los procesadores disponibles y, una vez recorridos,
+	 * se le asigna la tarea al mejor */
+
+	public Solucion greedy(int tiempoMaxNoRefrigerado){
 
 		ArrayList<Procesador> processors = new ArrayList<>(procesadores.values());
 
 		for(int posT = tareasPorTiempo.size()-1; posT >= 0; posT--){
+			//Cantidad de candidatos considerados
+			contador++;
+
 			Tarea t = tareasPorTiempo.get(posT);
-			int posP=0, tiempoOptimo = Integer.MAX_VALUE;
+			int posP=0;
+			int tiempoOptimo = INFINITO;
 			Procesador mejorProcesador = null;
 
 			while(posP < processors.size()){
 				Procesador p = processors.get(posP);
 				if(esAsignacionValida(p, t, tiempoMaxNoRefrigerado)){
+
 					if(p.getTiempoTotal() < tiempoOptimo){
 						tiempoOptimo = p.getTiempoTotal();
 						mejorProcesador = p;
@@ -311,49 +316,23 @@ public class Servicios {
 				posP++;
 			}
 
+			if(mejorProcesador == null){
+				/* Si hay alguna tarea que no se haya podido asignar a algun procesador, retornamos una
+				 * solucion con un HashMap vacío, ya que no hay solución */
+				return new Solucion("Greedy",new HashMap<>());
+			}
+
 			mejorAsignacion.get(mejorProcesador).add(t);
-			cantidadEstados++;
 			mejorProcesador.incrementarTiempoTotal(t.getTiempo());
+
 			if(t.esCritica()){
 				mejorProcesador.incrementarTCriticas();
 			}
 		}
-	}
 
-	public String getMejorAsignacion(){
-		String mejorAsig = "";
-		// Imprimir la asignación resultante
-		for(Map.Entry<Procesador, List<Tarea>> entry : mejorAsignacion.entrySet()) {
-			Procesador procesador = entry.getKey();
-			List<Tarea> tareasAsignadas = entry.getValue();
+		int tiempo = calcularTiempoMaximoAsignacion(mejorAsignacion);
+		return new Solucion("Greedy",mejorAsignacion, tiempo, contador);
 
-			mejorAsig += "\n Procesador: " + procesador.getId();
-
-			if (tareasAsignadas.isEmpty()) {
-				mejorAsig += "\n  Sin tareas asignadas.";
-			} else {
-				for (Tarea tarea : tareasAsignadas) {
-					mejorAsig += "\n  Tarea: " + tarea.getNombre();
-				}
-			}
-		}
-		return mejorAsig;
-	}
-
-	public int getTiempoMaximoOptimo(){
-		return tiempoMaximoOptimo;
-	}
-
-
-
-	/* Recorriendo las tareas ordenadas por tiempo, de mayor a menor, por cada una se recorren todos los procesadores
-	* y, si es una asignacion valida, guarda el mejor tiempo entre los procesadores disponibles y, una vez recorridos,
-	* se le asigna la tarea al mejor */
-	public void solucionGreedy() {
-		System.out.println( "Greedy\n" +
-				"Solución obtenida: " + getMejorAsignacion() +
-				"\nSolución obtenida (tiempo máximo de ejecución): " + calcularTiempoMaximoAsignacion(mejorAsignacion)+
-				"\nMétrica para analizar el costo de la solución (cantidad de candidatos considerados): "+ getCantidadEstados());
 	}
 
 }
